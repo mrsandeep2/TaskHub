@@ -10,7 +10,15 @@ def _require(key: str) -> str:
             f"Missing required environment variable: {key}\n"
             f"See .env.example for setup instructions."
         )
-    return val
+    sanitized = val.strip().strip("'\"")
+    print(f"[Config] Loaded {key}: length={len(sanitized)}, starts with '{sanitized[:5]}...{sanitized[-5:]}'", flush=True)
+    return sanitized
+
+def _get_opt(key: str, default: str = "") -> str:
+    val = os.getenv(key, default)
+    if val is None:
+        return default
+    return val.strip().strip("'\"")
 
 class Config:
     SUPABASE_URL: str = _require("SUPABASE_URL")
@@ -18,21 +26,21 @@ class Config:
     SUPABASE_ANON_KEY: str = _require("SUPABASE_ANON_KEY")
     JWT_SECRET: str = _require("JWT_SECRET")
 
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
-    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
-    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    GOOGLE_CLIENT_ID: str = _get_opt("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = _get_opt("GOOGLE_CLIENT_SECRET", "")
+    GITHUB_CLIENT_ID: str = _get_opt("GITHUB_CLIENT_ID", "")
+    GITHUB_CLIENT_SECRET: str = _get_opt("GITHUB_CLIENT_SECRET", "")
+    FRONTEND_URL: str = _get_opt("FRONTEND_URL", "http://localhost:3000")
 
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+    REDIS_URL: str = _get_opt("REDIS_URL", "redis://localhost:6379/0")
+    CELERY_BROKER_URL: str = _get_opt("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND: str = _get_opt("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 
-    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
-    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "noreply@taskhub.app")
+    RESEND_API_KEY: str = _get_opt("RESEND_API_KEY", "")
+    FROM_EMAIL: str = _get_opt("FROM_EMAIL", "noreply@taskhub.app")
 
-    STABILITY_API_KEY: str = os.getenv("STABILITY_API_KEY", "")
-    REPLICATE_API_TOKEN: str = os.getenv("REPLICATE_API_TOKEN", "")
+    STABILITY_API_KEY: str = _get_opt("STABILITY_API_KEY", "")
+    REPLICATE_API_TOKEN: str = _get_opt("REPLICATE_API_TOKEN", "")
 
     AI_RATE_LIMIT: str = "10/hour"
     API_RATE_LIMIT: str = "100/minute"
