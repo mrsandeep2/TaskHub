@@ -1,162 +1,117 @@
 # TaskHub — AI Product Photography Platform
 
-A production-grade SaaS platform combining **Task Management** with an **AI-Powered Product Photography Studio**.
+TaskHub is a production-grade SaaS platform combining **Task Management** with an **AI-Powered Product Photography Studio**. It allows admins to manage product tasks and designers to generate studio-quality product photos using Stability AI.
 
-```
-taskhub/
-├── frontend/          # Next.js 14 App Router (TypeScript, Tailwind, shadcn/ui)
-├── backend/           # Flask REST API + Celery workers
-├── database/          # Supabase schema, RLS policies, seeds
-├── docs/              # Architecture & API docs
-└── generated_samples/ # Sample AI-generated image outputs
+### 🌐 Live Deployments
+* **Frontend:** [https://task-hub-omega-seven.vercel.app](https://task-hub-omega-seven.vercel.app)
+* **Backend API:** [https://taskhub-production-94ae.up.railway.app](https://taskhub-production-94ae.up.railway.app)
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    Client[Next.js 14 Frontend] -->|API Requests| API[Flask REST API]
+    API -->|Read/Write| DB[(Supabase Postgres)]
+    API -->|Async Job| Redis[(Redis Queue)]
+    Redis -->|Process Job| Worker[Celery Worker]
+    Worker -->|Image Generation| Stability[Stability AI API]
+    Worker -->|Background Removal| Rembg[rembg Library]
+    Worker -->|Upload Output| Storage[(Supabase Storage)]
+    Worker -->|Update Status| DB
 ```
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14, TypeScript (strict), Tailwind CSS, Framer Motion, React Query, Zustand |
-| Backend | Python, Flask, Celery, Redis |
-| Database | Supabase (PostgreSQL + Auth + Storage + RLS) |
-| AI | Stability AI (img2img), background removal (rembg) |
-| Email | Resend |
-| Auth | Google OAuth 2.0, GitHub OAuth |
-| Deploy | Vercel (frontend), Railway/Render (backend), Supabase (DB) |
+* **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Zustand, React Query, Framer Motion
+* **Backend:** Python, Flask, Celery, Redis
+* **Database & Auth:** Supabase (PostgreSQL, Storage Buckets, Row Level Security)
+* **AI Engine:** Stability AI (SDXL img2img) & `rembg` for background removal
+* **Notifications:** Resend API for transactional emails
 
 ---
 
-## Quick Start
+## 🚀 Setup & Local Development
 
-### 1. Clone & configure
+### 1. Database Setup (Supabase)
+1. Create a project at [supabase.com](https://supabase.com).
+2. Open the **SQL Editor** in Supabase and run:
+   * [database/migrations/001_initial_schema.sql](file:///c:/Users/sandeep%20kumar/Downloads/taskhub-ai-product-photography-platform-main%281%29/taskhub-ai-product-photography-platform-main/database/migrations/001_initial_schema.sql)
+   * [database/policies/rls_policies.sql](file:///c:/Users/sandeep%20kumar/Downloads/taskhub-ai-product-photography-platform-main%281%29/taskhub-ai-product-photography-platform-main/database/policies/rls_policies.sql)
+   * [database/seeds/seed_data.sql](file:///c:/Users/sandeep%20kumar/Downloads/taskhub-ai-product-photography-platform-main%281%29/taskhub-ai-product-photography-platform-main/database/seeds/seed_data.sql) *(Optional, for dev seeding)*
+3. Create a public storage bucket named `task-images`.
 
-```bash
-git clone <repo-url>
-cd taskhub
-cp .env.example .env
-# Fill in all environment variables
-```
+### 2. Backend Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Copy the environment template and fill in variables:
+   ```bash
+   cp .env.example .env
+   ```
+5. Run the server:
+   ```bash
+   flask run --port 5000
+   ```
 
-### 2. Database setup (Supabase)
-
-1. Create a new Supabase project
-2. Go to **SQL Editor**
-3. Run `database/migrations/001_initial_schema.sql`
-4. Run `database/policies/rls_policies.sql`
-5. (Optional) Run `database/seeds/seed_data.sql`
-6. Create a **Storage bucket** named `task-images` (set to public)
-
-### 3. Frontend
-
-```bash
-cd frontend
-cp .env.local.example .env.local
-npm install
-npm run dev          # http://localhost:3000
-```
-
-### 4. Backend
-
-```bash
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp ../.env.example .env
-flask run --port 5000  # http://localhost:5000
-```
-
-### 5. Celery worker (for AI generation jobs)
-
+### 3. Celery Worker Setup
+Ensure you have a local Redis server running, then start the Celery worker:
 ```bash
 cd backend
 celery -A workers.celery_app worker --loglevel=info
 ```
 
----
-
-## Environment Variables
-
-See `.env.example` for all required variables. Key ones:
-
-| Variable | Purpose |
-|---|---|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | Service role key (backend) |
-| `JWT_SECRET` | Min 32-char secret for JWT tokens |
-| `GOOGLE_CLIENT_ID/SECRET` | Google OAuth credentials |
-| `GITHUB_CLIENT_ID/SECRET` | GitHub OAuth credentials |
-| `STABILITY_API_KEY` | Stability AI for image generation |
-| `RESEND_API_KEY` | Resend for transactional emails |
-| `REDIS_URL` | Redis for Celery job queue |
-
----
-
-## AI Product Consistency Strategy
-
-The core challenge: generated images must preserve the **exact product** while only changing context.
-
-**Pipeline:**
-1. **Background Removal** — `rembg` library extracts product with clean mask
-2. **img2img at low strength** — `strength=0.30-0.40` preserves product structure
-3. **Strong negative prompts** — prevent `"altered product, different design, distorted"`
-4. **Reference conditioning** — original product passed as `init_image` every time
-5. **Compositing** — extracted product composited onto generated background
-
-**Limitations:**
-- Stability AI img2img at low strength (~0.35) preserves ~85-90% product fidelity
-- For production-grade pixel-perfect consistency, use ComfyUI with ControlNet + IP-Adapter
-- Model wearing shots are hardest — require inpainting pipeline
+### 4. Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy the environment template and fill in variables:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-## Task Status Flow
+## 🔒 Environment Variables Reference
 
-```
-pending → assigned → in_progress → submitted → accepted
-                                        ↓
-                              revision_requested
-                                        ↓
-                                  in_progress
-```
+### Backend variables (`backend/.env`):
+* `SUPABASE_URL` - Supabase Project URL
+* `SUPABASE_SERVICE_KEY` - Supabase Service Role Secret key
+* `SUPABASE_ANON_KEY` - Supabase Anon Public key
+* `JWT_SECRET` - Secret key used to sign JWT auth cookies
+* `FRONTEND_URL` - Origin of the frontend application (for CORS)
+* `REDIS_URL` - Connection string for Celery queue (Redis)
+* `RESEND_API_KEY` - Transactional email token from Resend
+* `FROM_EMAIL` - Sender email address
+* `STABILITY_API_KEY` - API key for Stability AI
 
----
-
-## API Documentation
-
-See `docs/api.md` for full API reference.
-
-**Base URL:** `http://localhost:5000/api`
-
-Key endpoints:
-- `POST /auth/oauth/google` — Google OAuth login
-- `GET /auth/me` — Current user
-- `GET /tasks` — List tasks (admin)
-- `POST /tasks` — Create task with product image (admin)
-- `GET /my-tasks` — User's assigned tasks
-- `POST /tasks/:id/generate` — Start AI generation
-- `GET /tasks/:id/generations` — List generated images
-- `PUT /tasks/:id/accept` — Accept submission (admin)
-
----
-
-## Deployment
-
-### Frontend → Vercel
-```bash
-cd frontend
-vercel deploy
-```
-
-### Backend → Railway
-```bash
-# railway.json already configured
-railway up
-```
-
-### Required env vars on both platforms — copy from `.env.example`
-
----
-
-## License
-MIT
+### Frontend variables (`frontend/.env.local`):
+* `NEXT_PUBLIC_API_URL` - URL of the running backend API
+* `NEXT_PUBLIC_SUPABASE_URL` - Supabase Project URL
+* `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase Anon Public key
