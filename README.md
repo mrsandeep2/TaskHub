@@ -25,6 +25,40 @@ graph TD
 
 ---
 
+## 🔄 How It Works (Workflow Lifecycle)
+
+The platform is designed around a collaborative workflow between **Administrators** (who manage tasks) and **Designers/Users** (who generate the photography).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin
+    actor Designer
+    participant System as TaskHub System (Flask & Celery)
+    
+    Admin->>System: Create task & upload product image
+    System-->>Designer: Assign task & send email notification
+    Designer->>System: Open AI Studio & generate 8 photos
+    System->>System: Run background removal & SDXL img2img pipeline
+    Designer->>System: Choose final photo selections & Submit task
+    System-->>Admin: Send review notification
+    alt Approved
+        Admin->>System: Accept Task (Complete)
+    else Revisions Requested
+        Admin->>System: Request Revision with feedback
+        System-->>Designer: Move task back to 'In Progress'
+    end
+```
+
+### Step-by-Step Workflow:
+1. **Task Creation:** Admin uploads a raw product photo, writes guidelines, assigns it to a designer, and the system sends an email alert.
+2. **AI Generation:** The designer opens the **AI Studio** for that task, generating 8 different variations (e.g. white background, model wearing, lifestyle scene).
+3. **Fidelity Preservation:** The backend removes the background (`rembg`) and runs Stability AI SDXL (`img2img` at `0.30`-`0.40` strength) to keep the product identical while shifting the surroundings.
+4. **Submission:** The designer selects the best images as final outputs and submits them to the admin.
+5. **Review & Approval:** The admin compares the original vs. final images side-by-side. The admin can either **Accept** the task or **Request Revision** with feedback comments to send it back to the designer.
+
+---
+
 ## 🌟 Key Features
 
 * **Task Management & Workflow:** Clear status transitions (`pending` ➔ `assigned` ➔ `in_progress` ➔ `submitted` ➔ `accepted`/`revision_requested`).
