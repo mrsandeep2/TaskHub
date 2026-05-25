@@ -6,7 +6,7 @@ resend.api_key = config.RESEND_API_KEY
 def _send(to: str, subject: str, html: str) -> bool:
     try:
         resend.Emails.send({
-            "from": f"TaskHub <{config.FROM_EMAIL}>",
+            "from": config.FROM_EMAIL,
             "to": [to],
             "subject": subject,
             "html": html,
@@ -78,7 +78,7 @@ def send_email(to_email: str, subject: str, message: str) -> dict:
         html_content = _base_template(f"<p>{formatted_message}</p>")
         
         response = resend.Emails.send({
-            "from": f"TaskHub <{config.FROM_EMAIL}>",
+            "from": config.FROM_EMAIL,
             "to": [to_email],
             "subject": subject,
             "html": html_content,
