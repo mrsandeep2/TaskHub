@@ -3,15 +3,28 @@ import { API_BASE_URL } from "@/constants";
 
 const api = axios.create({
   baseURL: API_BASE_URL + "/api",
-  withCredentials: true,
+  withCredentials: false,
   headers: { "Content-Type": "application/json" },
+});
+
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      window.location.href = "/auth/login";
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        window.location.href = "/auth/login";
+      }
     }
     return Promise.reject(err);
   }

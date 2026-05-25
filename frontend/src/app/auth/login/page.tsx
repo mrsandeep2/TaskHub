@@ -1,23 +1,33 @@
 "use client";
 import { motion } from "framer-motion";
-import { Github, Zap, Chrome } from "lucide-react";
-import { API_BASE_URL } from "@/constants";
+import { Zap } from "lucide-react";
+import { createClient } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE_URL}/api/auth/oauth/google`;
+  const supabase = createClient();
+
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
-  const handleGithubLogin = () => {
-    window.location.href = `${API_BASE_URL}/api/auth/oauth/github`;
+  const handleGithubLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-indigo-600/10" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-violet-600/5 rounded-full blur-3xl" />
-
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -25,7 +35,6 @@ export default function LoginPage() {
         className="relative w-full max-w-sm"
       >
         <div className="glass-card p-8 space-y-6">
-          {/* Logo */}
           <div className="text-center space-y-3">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/25">
               <Zap className="h-7 w-7 text-white" />
@@ -36,7 +45,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* OAuth buttons */}
           <div className="space-y-3">
             <button
               onClick={handleGoogleLogin}
@@ -55,7 +63,9 @@ export default function LoginPage() {
               onClick={handleGithubLogin}
               className="w-full flex items-center justify-center gap-3 h-11 rounded-xl border border-border bg-background hover:bg-accent transition-all duration-200 text-sm font-medium hover:shadow-sm"
             >
-              <Github className="h-5 w-5" />
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
               Continue with GitHub
             </button>
           </div>
@@ -65,14 +75,12 @@ export default function LoginPage() {
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative text-center">
-              <span className="bg-card px-3 text-xs text-muted-foreground">Secure OAuth 2.0 authentication</span>
+              <span className="bg-card px-3 text-xs text-muted-foreground">Secure OAuth 2.0 via Supabase</span>
             </div>
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            By continuing, you agree to our{" "}
-            <a href="#" className="text-primary hover:underline">Terms</a> and{" "}
-            <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
+            By continuing, you agree to our Terms and Privacy Policy.
           </p>
         </div>
       </motion.div>

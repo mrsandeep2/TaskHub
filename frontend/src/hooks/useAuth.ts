@@ -10,10 +10,24 @@ export function useAuth() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("access_token")
+            : null;
+
+        if (!token) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         const res = await api.get<{ data: User }>("/auth/me");
         setUser(res.data.data);
       } catch {
         setUser(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("access_token");
+        }
       } finally {
         setLoading(false);
       }
@@ -23,9 +37,15 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      await api.post("/auth/logout");
-    } finally {
+      const { createClient } = await import("@/lib/supabase");
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch {}
+    finally {
       logout();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+      }
       window.location.href = "/auth/login";
     }
   };

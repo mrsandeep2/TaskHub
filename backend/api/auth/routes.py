@@ -187,6 +187,46 @@ def _upsert_oauth_user(email: str, name: str, avatar_url: str | None, provider: 
     return UserModel.upsert(user_data)
 
 
+@auth_bp.post("/supabase-callback")
+def supabase_callback():
+    """Receive Supabase session, create/update user in our DB, return our JWT."""
+    data = request.json or {}
+    supabase_user = data.get("user", {})
+
+    email = supabase_user.get("email")
+    if not email:
+        return jsonify({"success": False, "message": "No email provided"}), 400
+
+    user_metadata = supabase_user.get("user_metadata", {})
+    app_metadata = supabase_user.get("app_metadata", {})
+
+    name = (
+        user_metadata.get("full_name")
+        or user_metadata.get("name")
+        or user_metadata.get("user_name")
+        or user_metadata.get("preferred_username")
+        or email.split("@")[0]
+    )
+    avatar_url = (
+        user_metadata.get("avatar_url")
+        or user_metadata.get("picture")
+    )
+    provider = app_metadata.get("provider", "oauth")
+
+    user = _upsert_oauth_user(
+        email=email,
+        name=name,
+        avatar_url=avatar_url,
+        provider=provider,
+    )
+
+    token = create_token(user["id"])
+    return jsonify({
+        "success": True,
+        "data": {"token": token, "user": user}
+    })
+
+
 @auth_bp.get("/me")
 @require_auth
 def me():
