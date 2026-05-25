@@ -2,8 +2,10 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Zap, ArrowRight, CheckCircle, Users, BarChart3, Layers, Mail, Star } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LandingPage() {
+  const { user, isLoading, signOut } = useAuth();
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -21,15 +23,31 @@ export default function LandingPage() {
             <a href="#ai-studio" className="hover:text-foreground transition-colors">AI Studio</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Sign In
-            </Link>
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all hover:shadow-md"
-            >
-              Get Started <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {isLoading ? (
+              <div className="h-4 w-12 bg-muted animate-pulse rounded" />
+            ) : user ? (
+              <button
+                onClick={signOut}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link href="/auth/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Sign In
+              </Link>
+            )}
+
+            {isLoading ? (
+              <div className="h-9 w-24 bg-muted animate-pulse rounded-xl" />
+            ) : (
+              <Link
+                href={user ? "/dashboard" : "/auth/login"}
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-all hover:shadow-md"
+              >
+                {user ? "Dashboard" : "Get Started"} <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -57,18 +75,34 @@ export default function LandingPage() {
               Assign, generate, review — at scale.
             </p>
             <div className="flex items-center justify-center gap-4 pt-2">
-              <Link
-                href="/auth/login"
-                className="inline-flex items-center gap-2 h-12 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5"
-              >
-                Get Started Free <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/auth/login"
-                className="inline-flex items-center gap-2 h-12 px-8 rounded-xl border border-border font-semibold hover:bg-accent transition-all"
-              >
-                Sign In
-              </Link>
+              {isLoading ? (
+                <div className="h-12 w-40 bg-muted animate-pulse rounded-xl" />
+              ) : (
+                <Link
+                  href={user ? "/dashboard" : "/auth/login"}
+                  className="inline-flex items-center gap-2 h-12 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5"
+                >
+                  {user ? "Go to Dashboard" : "Get Started Free"} <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+
+              {isLoading ? (
+                <div className="h-12 w-28 bg-muted animate-pulse rounded-xl" />
+              ) : user ? (
+                <button
+                  onClick={signOut}
+                  className="inline-flex items-center gap-2 h-12 px-8 rounded-xl border border-border font-semibold hover:bg-accent transition-all"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 h-12 px-8 rounded-xl border border-border font-semibold hover:bg-accent transition-all"
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
           </motion.div>
 
@@ -193,12 +227,16 @@ export default function LandingPage() {
           <p className="text-muted-foreground mb-8">
             Start generating premium product photos with AI today.
           </p>
-          <Link
-            href="/auth/login"
-            className="inline-flex items-center gap-2 h-12 px-10 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:-translate-y-0.5"
-          >
-            Get Started <ArrowRight className="h-4 w-4" />
-          </Link>
+          {isLoading ? (
+            <div className="h-12 w-36 bg-muted animate-pulse rounded-xl mx-auto" />
+          ) : (
+            <Link
+              href={user ? "/dashboard" : "/auth/login"}
+              className="inline-flex items-center gap-2 h-12 px-10 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:-translate-y-0.5"
+            >
+              {user ? "Go to Dashboard" : "Get Started"} <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </motion.div>
       </section>
 

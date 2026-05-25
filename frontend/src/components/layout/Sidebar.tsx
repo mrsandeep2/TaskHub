@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ListTodo, Users, CheckSquare,
   BarChart3, ScrollText, Settings, Zap, History,
-  User, ChevronLeft, ChevronRight
+  User, ChevronLeft, ChevronRight, Home
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui";
 
 const adminNav = [
+  { href: "/", icon: Home, label: "Home" },
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/admin/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/dashboard/admin/users", icon: Users, label: "Users" },
@@ -22,6 +23,7 @@ const adminNav = [
 ];
 
 const userNav = [
+  { href: "/", icon: Home, label: "Home" },
   { href: "/dashboard/user", icon: LayoutDashboard, label: "My Tasks" },
   { href: "/ai-studio", icon: Zap, label: "AI Studio" },
   { href: "/dashboard/user/history", icon: History, label: "History" },
