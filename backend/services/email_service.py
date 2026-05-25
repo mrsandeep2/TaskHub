@@ -68,3 +68,22 @@ def send_revision_requested(to: str, name: str, task_title: str, comment: str, t
     <blockquote style="border-left:3px solid #7c3aed;margin:0;padding:8px 16px;color:#4a4a5a">{comment}</blockquote>
     <a href="{task_url}" class="btn" style="margin-top:16px">Open AI Studio →</a>"""
     return _send(to, f"Revision Requested: {task_title}", _base_template(content))
+
+
+def send_email(to_email: str, subject: str, message: str) -> dict:
+    """Send an email using Resend Python SDK. Returns success/error status."""
+    try:
+        resend.api_key = config.RESEND_API_KEY
+        formatted_message = message.replace("\n", "<br/>")
+        html_content = _base_template(f"<p>{formatted_message}</p>")
+        
+        response = resend.Emails.send({
+            "from": f"TaskHub <{config.FROM_EMAIL}>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content,
+        })
+        return {"success": True, "data": response}
+    except Exception as e:
+        print(f"send_email error: {e}")
+        return {"success": False, "error": str(e)}

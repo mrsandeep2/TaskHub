@@ -38,6 +38,25 @@ def create_app() -> Flask:
     def health():
         return jsonify({"status": "ok", "service": "TaskHub API", "env": os.getenv("FLASK_ENV", "production")})
 
+    @app.post("/api/test-email")
+    def test_email():
+        from flask import request
+        from services.email_service import send_email
+        data = request.json or {}
+        email = data.get("email")
+        if not email:
+            return jsonify({"success": False, "message": "email required"}), 400
+        
+        res = send_email(
+            to_email=email,
+            subject="TaskHub Test Email",
+            message="Your email integration is working successfully."
+        )
+        if res.get("success"):
+            return jsonify(res), 200
+        else:
+            return jsonify(res), 500
+
     # Handle preflight OPTIONS for all routes
     @app.before_request
     def handle_options():
