@@ -19,7 +19,7 @@ import { cn } from "@/utils/cn";
 
 // ── Generation type card ──────────────────────────────────────
 function GenTypeCard({
-  typeKey, label, description, generation, onGenerate, onRegenerate, onDelete, onMarkFinal, onFullscreen,
+  typeKey, label, description, generation, onGenerate, onRegenerate, onDelete, onMarkFinal, onFullscreen, disabled,
 }: {
   typeKey: GenerationType;
   label: string;
@@ -30,6 +30,7 @@ function GenTypeCard({
   onDelete: () => void;
   onMarkFinal: () => void;
   onFullscreen: (url: string) => void;
+  disabled?: boolean;
 }) {
   const status = generation?.status;
   const isProcessing = status === "queued" || status === "processing";
@@ -40,7 +41,8 @@ function GenTypeCard({
     <div
       className={cn(
         "glass-card overflow-hidden group transition-all duration-200",
-        generation?.is_final && "ring-2 ring-primary shadow-lg shadow-primary/20"
+        generation?.is_final && "ring-2 ring-primary shadow-lg shadow-primary/20",
+        disabled && "opacity-75"
       )}
     >
       {/* Image area */}
@@ -79,7 +81,10 @@ function GenTypeCard({
                 </span>
               </div>
             )}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+            <div className={cn(
+              "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5",
+              disabled && "hidden"
+            )}>
               <button
                 onClick={() => onFullscreen(generation.image_url)}
                 className="h-8 w-8 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
@@ -127,16 +132,16 @@ function GenTypeCard({
         <p className="text-xs text-muted-foreground truncate mb-2">{description}</p>
 
         {!generation && !isProcessing ? (
-          <Button size="sm" className="w-full h-7 text-xs" onClick={onGenerate}>
+          <Button size="sm" className="w-full h-7 text-xs" onClick={onGenerate} disabled={disabled}>
             <Zap className="h-3 w-3 mr-1" /> Generate
           </Button>
         ) : isFailed ? (
-          <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onRegenerate}>
+          <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onRegenerate} disabled={disabled}>
             <RefreshCw className="h-3 w-3 mr-1" /> Retry
           </Button>
         ) : isDone ? (
           <div className="flex gap-1">
-            <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={onRegenerate}>
+            <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={onRegenerate} disabled={disabled}>
               <RefreshCw className="h-3 w-3" />
             </Button>
             <Button
@@ -144,6 +149,7 @@ function GenTypeCard({
               variant={generation?.is_final ? "default" : "outline"}
               className="flex-1 h-7 text-xs"
               onClick={onMarkFinal}
+              disabled={disabled}
             >
               <Star className="h-3 w-3" />
             </Button>
@@ -214,6 +220,10 @@ function AIStudioInner() {
   const generations = generationsData?.data ?? [];
   const completedCount = generations.filter((g) => g.status === "completed").length;
   const canSubmit = completedCount >= 8 && task?.status === "in_progress";
+  const isGenerating =
+    generateAll.isPending ||
+    (generations.length > 0 &&
+      generations.some((g) => ["queued", "processing"].includes(g.status)));
 
   if (isLoading || (taskLoading && taskId)) {
     return (
@@ -324,11 +334,28 @@ function AIStudioInner() {
                         <div className="flex flex-col gap-2">
                           {(t.status === "in_progress" || t.status === "revision_requested") && (
                             <Button
-                              className="w-full text-xs h-9 gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium"
-                              loading={generateAll.isPending && generateAll.variables === t.id}
+                              className={cn(
+                                "w-full text-xs h-9 gap-1.5 font-medium transition-all duration-300",
+                                generateAll.isPending && generateAll.variables === t.id
+                                  ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-600 hover:to-green-600 text-white cursor-not-allowed opacity-90"
+                                  : "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+                              )}
+                              disabled={generateAll.isPending && generateAll.variables === t.id}
                               onClick={() => generateAll.mutate(t.id)}
                             >
-                              <Zap className="h-3.5 w-3.5" /> Generate 8 Images
+                              {generateAll.isPending && generateAll.variables === t.id ? (
+                                <>
+                                  <svg className="animate-spin h-3.5 w-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                  </svg>
+                                  Img generating wait...
+                                </>
+                              ) : (
+                                <>
+                                  <Zap className="h-3.5 w-3.5" /> Generate 8 Images
+                                </>
+                              )}
                             </Button>
                           )}
                           <Link href={`/ai-studio?task=${t.id}`} className="w-full">
@@ -561,6 +588,7 @@ function AIStudioInner() {
                     onDelete={() => gen && deleteGen.mutate(gen.id)}
                     onMarkFinal={() => gen && markFinal.mutate(gen.id)}
                     onFullscreen={(url) => setFullscreenUrl(url)}
+                    disabled={isGenerating}
                   />
                 );
               })}
@@ -570,11 +598,28 @@ function AIStudioInner() {
             <div className="flex flex-col items-center gap-2 border-t border-border/55 pt-6">
               <Button
                 size="lg"
-                className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-violet-500/20 scale-105 hover:scale-110 active:scale-95"
-                loading={generateAll.isPending && generateAll.variables === taskId}
+                className={cn(
+                  "gap-2 font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg scale-105 hover:scale-110 active:scale-95",
+                  isGenerating
+                    ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-600 hover:to-green-600 text-white cursor-not-allowed opacity-90 shadow-emerald-500/20"
+                    : "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white hover:shadow-violet-500/20"
+                )}
+                disabled={isGenerating}
                 onClick={() => generateAll.mutate(taskId)}
               >
-                <Zap className="h-5 w-5 fill-current animate-pulse" /> Generate 8 Images (1-Click)
+                {isGenerating ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Img generating wait...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5 fill-current animate-pulse" /> Generate 8 Images (1-Click)
+                  </>
+                )}
               </Button>
               <p className="text-xs text-muted-foreground">
                 Generates all 8 premium photography angles using AI Studio

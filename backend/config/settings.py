@@ -44,6 +44,7 @@ class Config:
 
     AI_RATE_LIMIT: str = "10/hour"
     API_RATE_LIMIT: str = "100/minute"
+    USE_CELERY: bool = _get_opt("USE_CELERY", "false").lower() == "true"
     DEBUG: bool = os.getenv("FLASK_ENV") == "development"
 
 config = Config()

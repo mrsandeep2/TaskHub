@@ -45,12 +45,14 @@ def generate(task_id: str):
         TaskModel.update(task_id, {"status": "in_progress"})
 
     # Dispatch background job
-    try:
-        from workers.tasks import generate_image_task
-        job = generate_image_task.delay(gen_id, task_id, gen_type)
-        GenerationModel.update(gen_id, {"job_id": job.id})
-    except Exception:
-        # If Celery not available, run synchronously (dev mode)
+    if config.USE_CELERY:
+        try:
+            from workers.tasks import generate_image_task
+            job = generate_image_task.delay(gen_id, task_id, gen_type)
+            GenerationModel.update(gen_id, {"job_id": job.id})
+        except Exception:
+            _run_sync(gen_id, task_id, gen_type)
+    else:
         _run_sync(gen_id, task_id, gen_type)
 
     log_action(g.user["id"], "generate", "generation", gen_id, {"type": gen_type})
@@ -87,13 +89,16 @@ def generate_all(task_id: str):
         })
         
         # Dispatch background job
-        try:
-            from workers.tasks import generate_image_task
-            job = generate_image_task.delay(gen_id, task_id, gen_type)
-            GenerationModel.update(gen_id, {"job_id": job.id})
-            jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
-        except Exception:
-            # Fallback sync generation when Celery is unavailable
+        if config.USE_CELERY:
+            try:
+                from workers.tasks import generate_image_task
+                job = generate_image_task.delay(gen_id, task_id, gen_type)
+                GenerationModel.update(gen_id, {"job_id": job.id})
+                jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
+            except Exception:
+                _run_sync(gen_id, task_id, gen_type)
+                jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
+        else:
             _run_sync(gen_id, task_id, gen_type)
             jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
             
@@ -106,22 +111,24 @@ def _run_sync(gen_id: str, task_id: str, gen_type: str):
     """Fallback sync generation when Celery is unavailable."""
     import threading
     def _worker():
+        from services.ai_service import generate_product_image
+        from services.storage_service import upload_generated_image
+        import requests as req
+        
+        GenerationModel.update(gen_id, {"status": "processing"})
         try:
-            from workers.tasks import generate_image_task
-            generate_image_task(gen_id, task_id, gen_type)
-        except Exception:
-            from services.ai_service import generate_product_image
-            from services.storage_service import upload_generated_image
-            import requests as req
             task = TaskModel.get_by_id(task_id)
-            GenerationModel.update(gen_id, {"status": "processing"})
-            try:
-                r = req.get(task["product_image_url"], timeout=30)
-                img_bytes = generate_product_image(gen_type, r.content)
-                url = upload_generated_image(img_bytes, task_id, gen_type)
-                GenerationModel.update(gen_id, {"status": "completed", "image_url": url})
-            except Exception as e:
-                GenerationModel.update(gen_id, {"status": "failed", "error_message": str(e)[:500]})
+            if not task:
+                raise ValueError(f"Task {task_id} not found")
+                
+            r = req.get(task["product_image_url"], timeout=30)
+            r.raise_for_status()
+            
+            img_bytes = generate_product_image(gen_type, r.content)
+            url = upload_generated_image(img_bytes, task_id, gen_type)
+            GenerationModel.update(gen_id, {"status": "completed", "image_url": url})
+        except Exception as e:
+            GenerationModel.update(gen_id, {"status": "failed", "error_message": str(e)[:500]})
     threading.Thread(target=_worker, daemon=True).start()
 
 
