@@ -135,7 +135,7 @@ def preprocess_product_image(product_bytes: bytes, gen_type: str) -> bytes:
     Preprocess the product image:
     1. Remove black/white background.
     2. Crop to content bounding box.
-    3. Apply angle/zoom transformations.
+    3. Apply angle transformations (zoom/closeup is handled via scaling).
     """
     try:
         img = Image.open(BytesIO(product_bytes))
@@ -143,15 +143,7 @@ def preprocess_product_image(product_bytes: bytes, gen_type: str) -> bytes:
         img_cropped = crop_to_content(img_no_bg)
         
         # Apply type-specific transformations
-        if "closeup" in gen_type:
-            # Zoom in by cropping to center 65% area
-            w, h = img_cropped.size
-            left = int(w * 0.17)
-            top = int(h * 0.17)
-            right = int(w * 0.83)
-            bottom = int(h * 0.83)
-            img_cropped = img_cropped.crop((left, top, right, bottom))
-        elif "side" in gen_type:
+        if "side" in gen_type:
             # Rotate by 25 degrees and squeeze horizontally to simulate a 3D side profile angle
             img_cropped = img_cropped.rotate(-25, expand=True, resample=Image.Resampling.BICUBIC)
             new_w = max(10, int(img_cropped.width * 0.75))
@@ -228,34 +220,97 @@ def _placeholder_image_composite(product_bytes: bytes | None, gen_type: str) -> 
     
     # Define gradients/colors based on type
     if gen_type == "white_background":
-        # Pure studio white with a soft vignette/border
+        # Pure studio white
         draw.rectangle([(0, 0), (width, height)], fill=(255, 255, 255))
         draw.rectangle([(20, 20), (width-20, height-20)], outline=(240, 240, 240), width=2)
-    elif "theme_background" in gen_type or "creative" in gen_type:
-        # Luxury warm gradient
+    elif gen_type == "theme_background_1":
+        # Luxury warm burgundy/gold gradient
         for y in range(height):
-            r = int(24 + (48 - 24) * (y / height))
-            g = int(20 + (24 - 20) * (y / height))
-            b = int(36 + (48 - 36) * (y / height))
+            r = int(45 - (45 - 20) * (y / height))
+            g = int(15 - (15 - 10) * (y / height))
+            b = int(25 - (25 - 15) * (y / height))
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+    elif gen_type == "theme_background_2":
+        # Sleek modern navy/blue gradient
+        for y in range(height):
+            r = int(15 + (35 - 15) * (y / height))
+            g = int(25 + (50 - 25) * (y / height))
+            b = int(55 + (85 - 55) * (y / height))
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+    elif gen_type == "creative_1":
+        # Dramatic dark emerald/teal gradient
+        for y in range(height):
+            r = int(8 + (18 - 8) * (y / height))
+            g = int(32 + (48 - 32) * (y / height))
+            b = int(28 + (38 - 28) * (y / height))
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+    elif gen_type == "creative_2":
+        # Moody deep violet/amethyst gradient
+        for y in range(height):
+            r = int(28 + (55 - 28) * (y / height))
+            g = int(12 + (20 - 12) * (y / height))
+            b = int(48 + (80 - 48) * (y / height))
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+    elif "side" in gen_type:
+        # Soft studio beige-rose backdrop
+        for y in range(height):
+            r = int(215 - (215 - 195) * (y / height))
+            g = int(200 - (200 - 180) * (y / height))
+            b = int(195 - (195 - 175) * (y / height))
+            draw.line([(0, y), (width, y)], fill=(r, g, b))
+    elif "closeup" in gen_type:
+        # Soft studio warm grey backdrop
+        for y in range(height):
+            r = int(200 - (200 - 180) * (y / height))
+            g = int(198 - (198 - 178) * (y / height))
+            b = int(195 - (195 - 175) * (y / height))
             draw.line([(0, y), (width, y)], fill=(r, g, b))
     else:
-        # Studio grey/beige backdrop for models
+        # Studio sand/grey backdrop for model front
         for y in range(height):
-            r = int(210 - (210 - 180) * (y / height))
-            g = int(205 - (205 - 175) * (y / height))
-            b = int(200 - (200 - 170) * (y / height))
+            r = int(208 - (208 - 188) * (y / height))
+            g = int(205 - (205 - 185) * (y / height))
+            b = int(200 - (200 - 180) * (y / height))
             draw.line([(0, y), (width, y)], fill=(r, g, b))
 
     # Add abstract background details
     if gen_type != "white_background":
-        draw.ellipse([(-200, -200), (600, 600)], fill=None, outline=(255, 255, 255), width=1)
-        draw.ellipse([(width-600, height-600), (width+200, height+200)], fill=None, outline=(255, 255, 255), width=1)
+        if "theme_background_1" in gen_type:
+            draw.ellipse([(-200, -200), (600, 600)], fill=None, outline=(150, 120, 80, 40), width=2)
+            draw.ellipse([(-100, -100), (500, 500)], fill=None, outline=(150, 120, 80, 20), width=1)
+        elif "theme_background_2" in gen_type:
+            draw.ellipse([(width-600, height-600), (width+200, height+200)], fill=None, outline=(100, 150, 200, 40), width=2)
+            draw.ellipse([(width-500, height-500), (width+100, height+100)], fill=None, outline=(100, 150, 200, 20), width=1)
+        elif "creative_1" in gen_type:
+            draw.arc([(-300, 200), (800, 1100)], start=0, end=360, fill=(150, 220, 200, 40), width=2)
+            draw.arc([(-200, 300), (700, 1000)], start=0, end=360, fill=(150, 220, 200, 20), width=1)
+        elif "creative_2" in gen_type:
+            draw.ellipse([(width-700, -300), (width+300, 700)], fill=None, outline=(180, 130, 220, 40), width=2)
+            draw.line([(0, 100), (width, 400)], fill=(180, 130, 220, 20), width=1)
+        else:
+            # Model backdrops
+            draw.ellipse([(-200, -200), (600, 600)], fill=None, outline=(255, 255, 255, 15), width=1)
+            draw.ellipse([(width-600, height-600), (width+200, height+200)], fill=None, outline=(255, 255, 255, 15), width=1)
 
     # Draw neck outline if "model" is in type to make it look like a model is wearing it
     if "model" in gen_type:
         neck_color = (225, 198, 185)
         shadow_color = (205, 178, 165)
-        if "side" in gen_type:
+        if "closeup" in gen_type:
+            # Zoomed-in wider neck profile
+            draw.polygon(
+                [
+                    (512 - 140, 100), (512 + 140, 100),
+                    (512 + 165, 480),
+                    (512 + 500, 800), (512 + 500, 1024),
+                    (512 - 500, 1024), (512 - 500, 800),
+                    (512 - 165, 480)
+                ],
+                fill=neck_color,
+                outline=shadow_color,
+                width=3
+            )
+        elif "side" in gen_type:
             # Side angle neck profile outline
             draw.polygon(
                 [
@@ -292,14 +347,22 @@ def _placeholder_image_composite(product_bytes: bytes | None, gen_type: str) -> 
                 prod_img = prod_img.convert('RGBA')
             
             # Scale to fit nicely in the frame
-            scale_size = 850 if "closeup" in gen_type else 680
+            # If closeup, scale to fill the frame (e.g. 980) so it's a full closeup
+            # Otherwise, use a standard size (e.g. 620)
+            if "closeup" in gen_type:
+                scale_size = 980
+            else:
+                scale_size = 620
             prod_img.thumbnail((scale_size, scale_size), Image.Resampling.LANCZOS)
             
             # Center coordinates
             px = (width - prod_img.width) // 2
             # If front/side model, position the necklace slightly higher so it sits properly on the neck
-            if "model" in gen_type and "closeup" not in gen_type:
-                py = height // 2 - prod_img.height // 3
+            if "model" in gen_type:
+                if "closeup" in gen_type:
+                    py = height // 2 - prod_img.height // 2.5
+                else:
+                    py = height // 2 - prod_img.height // 3
             else:
                 py = (height - prod_img.height) // 2
             
