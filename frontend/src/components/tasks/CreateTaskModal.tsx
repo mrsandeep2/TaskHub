@@ -18,6 +18,7 @@ interface CreateTaskModalProps {
 export function CreateTaskModal({ open, onClose, users }: CreateTaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
@@ -54,6 +55,7 @@ export function CreateTaskModal({ open, onClose, users }: CreateTaskModalProps) 
     const fd = new FormData();
     fd.append("title", title);
     fd.append("description", description);
+    fd.append("custom_prompt", customPrompt);
     fd.append("product_image", file!);
     if (assignedTo) fd.append("assigned_to", assignedTo);
     await createTask.mutateAsync(fd);
@@ -61,7 +63,7 @@ export function CreateTaskModal({ open, onClose, users }: CreateTaskModalProps) 
   };
 
   const handleClose = () => {
-    setTitle(""); setDescription(""); setAssignedTo(""); setFile(null); setPreview(""); setErrors({});
+    setTitle(""); setDescription(""); setCustomPrompt(""); setAssignedTo(""); setFile(null); setPreview(""); setErrors({});
     onClose();
   };
 
@@ -91,6 +93,7 @@ export function CreateTaskModal({ open, onClose, users }: CreateTaskModalProps) 
 
             <Input label="Task Title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Diamond Ring Collection" error={errors.title} />
             <Textarea label="Instructions" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe the photography requirements..." error={errors.description} rows={3} />
+            <Textarea label="Custom AI Prompt / Brand Guidelines (optional)" value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder="e.g. Mediterranean luxury villa, soft neutral background, dynamic warm lighting..." rows={2} />
 
             {/* File upload */}
             <div className="space-y-1.5">

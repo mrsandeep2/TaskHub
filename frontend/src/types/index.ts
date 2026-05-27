@@ -36,6 +36,7 @@ export interface Task {
   title: string;
   description: string;
   product_image_url: string;
+  custom_prompt?: string;
   status: TaskStatus;
   assigned_to?: string;
   assigned_user?: User;

@@ -413,6 +413,7 @@ def _placeholder_image_composite(product_bytes: bytes | None, gen_type: str) -> 
 def generate_product_image(
     gen_type: str,
     product_image_bytes: bytes,
+    custom_prompt: str = None,
 ) -> bytes:
     """
     Main generation pipeline:
@@ -421,6 +422,9 @@ def generate_product_image(
     3. Generate via Stability AI XL using the clean composite
     """
     prompts = GENERATION_PROMPTS.get(gen_type, GENERATION_PROMPTS["white_background"])
+    positive_prompt = prompts["positive"]
+    if custom_prompt and custom_prompt.strip():
+        positive_prompt = f"{custom_prompt.strip()}, {positive_prompt}"
 
     # Step 1: extract product & apply geometry based on type (Removes black background + crops/scales/rotates)
     preprocessed_bytes = preprocess_product_image(product_image_bytes, gen_type)
@@ -435,7 +439,7 @@ def generate_product_image(
 
     # Step 3: generate using clean composite as the init image
     result_bytes = generate_image_stability(
-        prompt=prompts["positive"],
+        prompt=positive_prompt,
         negative_prompt=prompts["negative"],
         init_image_bytes=init_composite_bytes,
         strength=0.30 if "model" in gen_type else 0.40,

@@ -54,6 +54,12 @@ export default function AdminTaskDetailPage() {
           <Card>
             <h3 className="font-semibold mb-2 text-xs text-muted-foreground uppercase tracking-widest">Task Details</h3>
             <p className="text-sm leading-relaxed">{task.description}</p>
+            {task.custom_prompt && (
+              <div className="mt-3 pt-3 border-t border-border space-y-1">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Custom Prompt / Style Guidelines</h4>
+                <p className="text-xs italic bg-accent/40 p-2.5 rounded-lg border border-border/50 text-muted-foreground">"{task.custom_prompt}"</p>
+              </div>
+            )}
             {task.assigned_user && (
               <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
                 <div className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold">

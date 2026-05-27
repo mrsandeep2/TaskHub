@@ -36,6 +36,7 @@ def list_tasks():
 def create_task():
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
+    custom_prompt = request.form.get("custom_prompt", "").strip() or None
     assigned_to = request.form.get("assigned_to") or None
     if not assigned_to:
         assigned_to = g.user["id"]
@@ -54,6 +55,7 @@ def create_task():
         "id": task_id,
         "title": title,
         "description": description,
+        "custom_prompt": custom_prompt,
         "product_image_url": image_url,
         "status": "assigned" if assigned_to else "pending",
         "assigned_to": assigned_to,

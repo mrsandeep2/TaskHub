@@ -589,6 +589,16 @@ function AIStudioInner() {
                 </h3>
                 <p className="text-sm font-medium">{task.title}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
+                {task.custom_prompt && (
+                  <div className="pt-2 border-t border-border/40 space-y-1">
+                    <h4 className="text-[10px] font-semibold text-primary uppercase tracking-widest">
+                      Custom AI Prompt
+                    </h4>
+                    <p className="text-xs text-muted-foreground italic leading-relaxed bg-accent/40 p-2 rounded-lg border border-border/45">
+                      "{task.custom_prompt}"
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

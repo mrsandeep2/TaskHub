@@ -124,7 +124,11 @@ def _run_sync(gen_id: str, task_id: str, gen_type: str):
             r = req.get(task["product_image_url"], timeout=30)
             r.raise_for_status()
             
-            img_bytes = generate_product_image(gen_type, r.content)
+            img_bytes = generate_product_image(
+                gen_type,
+                r.content,
+                custom_prompt=task.get("custom_prompt")
+            )
             url = upload_generated_image(img_bytes, task_id, gen_type)
             GenerationModel.update(gen_id, {"status": "completed", "image_url": url})
         except Exception as e:

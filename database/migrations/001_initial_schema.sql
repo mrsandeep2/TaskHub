@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     title             TEXT NOT NULL,
     description       TEXT NOT NULL,
     product_image_url TEXT NOT NULL,
+    custom_prompt     TEXT,
     status            TEXT NOT NULL DEFAULT 'pending'
                       CHECK (status IN ('pending','assigned','in_progress','submitted','accepted','revision_requested')),
     assigned_to       UUID REFERENCES public.users(id) ON DELETE SET NULL,

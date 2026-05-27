@@ -89,6 +89,16 @@ export default function TaskDetailPage() {
               Instructions
             </h3>
             <p className="text-sm leading-relaxed">{task.description}</p>
+            {task.custom_prompt && (
+              <div className="mt-3 pt-3 border-t border-border space-y-1">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  Custom Prompt / Style Guidelines
+                </h4>
+                <p className="text-xs italic bg-accent/40 p-2.5 rounded-lg border border-border/50 text-muted-foreground">
+                  "{task.custom_prompt}"
+                </p>
+              </div>
+            )}
           </Card>
 
           <Card>

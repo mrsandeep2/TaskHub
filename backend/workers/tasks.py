@@ -24,7 +24,11 @@ def generate_image_task(self, generation_id: str, task_id: str, gen_type: str):
         product_bytes = response.content
 
         # Generate
-        result_bytes = generate_product_image(gen_type, product_bytes)
+        result_bytes = generate_product_image(
+            gen_type,
+            product_bytes,
+            custom_prompt=task.get("custom_prompt")
+        )
 
         # Upload to Supabase Storage
         image_url = upload_generated_image(result_bytes, task_id, gen_type)
