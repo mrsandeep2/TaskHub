@@ -360,9 +360,9 @@ def _placeholder_image_composite(product_bytes: bytes | None, gen_type: str) -> 
             # If front/side model, position the necklace slightly higher so it sits properly on the neck
             if "model" in gen_type:
                 if "closeup" in gen_type:
-                    py = height // 2 - prod_img.height // 2.5
+                    py = int(height / 2 - prod_img.height / 2.5)
                 else:
-                    py = height // 2 - prod_img.height // 3
+                    py = int(height / 2 - prod_img.height / 3)
             else:
                 py = (height - prod_img.height) // 2
             
