@@ -81,7 +81,7 @@ export function CreateTaskModal({ open, onClose, users }: CreateTaskModalProps) 
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative w-full max-w-lg glass-card p-6 space-y-5"
+            className="relative w-full max-w-lg glass-card p-6 space-y-5 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <div>
