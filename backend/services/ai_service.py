@@ -425,6 +425,10 @@ def generate_product_image(
     # Step 1: extract product & apply geometry based on type (Removes black background + crops/scales/rotates)
     preprocessed_bytes = preprocess_product_image(product_image_bytes, gen_type)
 
+    # Bypass Stability AI and return the preprocessed composite directly if no key is configured
+    if not config.STABILITY_API_KEY:
+        return _placeholder_image_composite(preprocessed_bytes, gen_type)
+
     # Step 2: Create a clean init image composite (necklace placed on white/gradient background) to send to Stability AI
     # This prevents Stability AI from seeing any black borders!
     init_composite_bytes = _placeholder_image_composite(preprocessed_bytes, gen_type)
