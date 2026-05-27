@@ -87,3 +87,31 @@ export function useRequestRevision() {
     onError: () => toast.error("Failed to request revision"),
   });
 }
+
+export function useStartTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.start(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["my-tasks"] });
+      qc.invalidateQueries({ queryKey: ["task", id] });
+      toast.success("Task accepted successfully");
+    },
+    onError: () => toast.error("Failed to accept task"),
+  });
+}
+
+export function useDeclineTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.decline(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["my-tasks"] });
+      qc.invalidateQueries({ queryKey: ["task", id] });
+      toast.success("Task declined successfully");
+    },
+    onError: () => toast.error("Failed to decline task"),
+  });
+}

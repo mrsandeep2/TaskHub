@@ -20,7 +20,7 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#workflow" className="hover:text-foreground transition-colors">How It Works</a>
-            <a href="#ai-studio" className="hover:text-foreground transition-colors">AI Studio</a>
+            <a href="/ai-studio" className="hover:text-foreground transition-colors">AI Studio</a>
           </nav>
           <div className="flex items-center gap-3">
             {isLoading ? (

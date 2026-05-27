@@ -1,14 +1,16 @@
 "use client";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ZoomIn, Maximize2, RefreshCw, Star, Trash2,
-  ArrowLeft, Zap, CheckCircle2, AlertCircle, Clock, Send
+  ArrowLeft, Zap, CheckCircle2, AlertCircle, Clock, Send, X, Eye
 } from "lucide-react";
 import Link from "next/link";
-import { useTask, useSubmitTask } from "@/hooks/useTasks";
-import { useGenerations, useGenerate, useDeleteGeneration, useMarkFinal } from "@/hooks/useGenerations";
+import { useTask, useSubmitTask, useMyTasks, useStartTask, useDeclineTask } from "@/hooks/useTasks";
+import { useGenerations, useGenerate, useDeleteGeneration, useMarkFinal, useGenerateAll } from "@/hooks/useGenerations";
+import { useAuth } from "@/hooks/useAuth";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
 import { GENERATION_TYPES } from "@/constants";
@@ -185,12 +187,25 @@ function FullscreenView({ url, onClose }: { url: string; onClose: () => void }) 
 // ── Main Studio ───────────────────────────────────────────────
 function AIStudioInner() {
   const params = useSearchParams();
+  const router = useRouter();
   const taskId = params.get("task") ?? "";
   const [fullscreenUrl, setFullscreenUrl] = useState<string | null>(null);
 
+  const { user, isLoading, isAdmin } = useAuth();
+  const { data: myTasksData, isLoading: myTasksLoading } = useMyTasks();
   const { data: taskData, isLoading: taskLoading } = useTask(taskId);
   const { data: generationsData } = useGenerations(taskId);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/auth/login?redirect=/ai-studio");
+    }
+  }, [user, isLoading, router]);
+
+  const startTask = useStartTask();
+  const declineTask = useDeclineTask();
   const generate = useGenerate();
+  const generateAll = useGenerateAll();
   const deleteGen = useDeleteGeneration();
   const markFinal = useMarkFinal();
   const submitTask = useSubmitTask();
@@ -200,20 +215,193 @@ function AIStudioInner() {
   const completedCount = generations.filter((g) => g.status === "completed").length;
   const canSubmit = completedCount >= 8 && task?.status === "in_progress";
 
-  if (!taskId) {
+  if (isLoading || (taskLoading && taskId)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-            <Zap className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="font-semibold">No task selected</p>
-          <p className="text-sm text-muted-foreground">Open AI Studio from a task page</p>
-          <Link href="/dashboard/user">
-            <Button variant="outline" size="sm">Go to Dashboard</Button>
-          </Link>
-        </div>
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
+    );
+  }
+
+  // Case 1: No Task Selected - Show list of assigned tasks
+  if (!taskId) {
+    const userTasks = myTasksData?.data ?? [];
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href={isAdmin ? "/dashboard/admin" : "/dashboard/user"}
+              className="h-9 w-9 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-white" />
+              </div>
+              <h1 className="text-xl font-display font-bold">AI Studio Tasks</h1>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Assigned Tasks</h2>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Select an accepted task to enter the AI Studio or accept pending tasks to get started.
+            </p>
+          </div>
+
+          {myTasksLoading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="glass-card p-5 space-y-4 animate-pulse">
+                  <div className="aspect-video rounded-xl bg-muted" />
+                  <div className="h-5 bg-muted rounded w-2/3" />
+                  <div className="h-4 bg-muted rounded w-1/2" />
+                  <div className="h-8 bg-muted rounded w-full" />
+                </div>
+              ))}
+            </div>
+          ) : userTasks.length === 0 ? (
+            <div className="text-center py-16 glass-card">
+              <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <Zap className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="font-semibold text-foreground">No tasks assigned</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                You do not have any photography tasks assigned to your account.
+              </p>
+              <Link href={isAdmin ? "/dashboard/admin" : "/dashboard/user"} className="inline-block mt-4">
+                <Button variant="outline" size="sm">Go to Dashboard</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userTasks.map((t) => (
+                <div
+                  key={t.id}
+                  className="glass-card overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col h-full"
+                >
+                  <div className="aspect-video bg-muted overflow-hidden relative">
+                    <img
+                      src={t.product_image_url}
+                      alt={t.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 right-3">
+                      <StatusBadge status={t.status} />
+                    </div>
+                  </div>
+                  <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-base leading-tight line-clamp-1">{t.title}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {t.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      {t.status === "assigned" ? (
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1 text-xs h-9 gap-1.5"
+                            variant="success"
+                            loading={startTask.isPending && startTask.variables === t.id}
+                            onClick={() => startTask.mutate(t.id)}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Accept
+                          </Button>
+                          <Button
+                            className="flex-1 text-xs h-9 gap-1.5"
+                            variant="destructive"
+                            loading={declineTask.isPending && declineTask.variables === t.id}
+                            onClick={() => declineTask.mutate(t.id)}
+                          >
+                            <X className="h-3.5 w-3.5" /> Decline
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {(t.status === "in_progress" || t.status === "revision_requested") && (
+                            <Button
+                              className="w-full text-xs h-9 gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium"
+                              loading={generateAll.isPending && generateAll.variables === t.id}
+                              onClick={() => generateAll.mutate(t.id)}
+                            >
+                              <Zap className="h-3.5 w-3.5" /> Generate 8 Images
+                            </Button>
+                          )}
+                          <Link href={`/ai-studio?task=${t.id}`} className="w-full">
+                            <Button variant="outline" className="w-full text-xs h-9 gap-1.5">
+                              <Eye className="h-3.5 w-3.5" /> Open Workspace
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Case 2: Task Selected but Not Accepted
+  if (task && task.status === "assigned") {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href={isAdmin ? `/dashboard/admin/tasks/${taskId}` : `/dashboard/user/tasks/${taskId}`}
+              className="h-9 w-9 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-white" />
+              </div>
+              <h1 className="text-xl font-display font-bold truncate">AI Studio — {task.title}</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center py-12">
+            <div className="max-w-md w-full glass-card p-8 text-center space-y-6">
+              <div className="h-16 w-16 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto text-primary">
+                <Zap className="h-8 w-8 animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold tracking-tight">Accept Task to Unlock AI Studio</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  You must accept this task before generating any premium AI product photography.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <Button
+                  className="flex-1 gap-2 h-10"
+                  variant="success"
+                  loading={startTask.isPending}
+                  onClick={() => startTask.mutate(taskId)}
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Accept Task
+                </Button>
+                <Button
+                  className="flex-1 gap-2 h-10"
+                  variant="destructive"
+                  loading={declineTask.isPending}
+                  onClick={() => declineTask.mutate(taskId)}
+                >
+                  <X className="h-4 w-4" /> Decline Task
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -225,180 +413,181 @@ function AIStudioInner() {
     generations.find((g) => g.type === type);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Top bar */}
-      <header className="h-16 border-b border-border bg-background/80 backdrop-blur-xl flex items-center px-6 gap-4 sticky top-0 z-40">
-        <Link
-          href={`/dashboard/user/tasks/${taskId}`}
-          className="h-8 w-8 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <Link
+              href={isAdmin ? `/dashboard/admin/tasks/${taskId}` : `/dashboard/user/tasks/${taskId}`}
+              className="h-9 w-9 rounded-xl border border-border flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
 
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shrink-0">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-bold text-sm truncate">
-              AI Studio{task ? ` — ${task.title}` : ""}
-            </h1>
-          </div>
-          {task && <StatusBadge status={task.status} />}
-        </div>
-
-        {/* Progress pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium">
-          <div className="relative h-4 w-4">
-            <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
-              <circle cx="8" cy="8" r="6" fill="none" stroke="hsl(var(--muted))" strokeWidth="2.5" />
-              <circle
-                cx="8"
-                cy="8"
-                r="6"
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="2.5"
-                strokeDasharray={`${(completedCount / 8) * 37.7} 37.7`}
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <span>{completedCount}/8 complete</span>
-        </div>
-
-        {canSubmit && (
-          <Button
-            size="sm"
-            variant="success"
-            loading={submitTask.isPending}
-            onClick={() => submitTask.mutate(taskId)}
-            className="gap-2"
-          >
-            <Send className="h-4 w-4" /> Submit
-          </Button>
-        )}
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel — original */}
-        <aside className="w-72 border-r border-border bg-card/50 flex flex-col p-4 gap-4 overflow-y-auto shrink-0">
-          <div>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-              Original Product
-            </h3>
-            {task ? (
-              <div className="rounded-xl overflow-hidden bg-muted aspect-square relative group">
-                <img
-                  src={task.product_image_url}
-                  alt={task.title}
-                  className="w-full h-full object-contain"
-                />
-                <button
-                  onClick={() => setFullscreenUrl(task.product_image_url)}
-                  className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Maximize2 className="h-6 w-6 text-white" />
-                </button>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-white" />
               </div>
-            ) : (
-              <div className="aspect-square rounded-xl bg-muted animate-pulse" />
+              <h1 className="text-xl font-display font-bold truncate">
+                AI Studio{task ? ` — ${task.title}` : ""}
+              </h1>
+              {task && <StatusBadge status={task.status} />}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Progress pill */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium">
+              <div className="relative h-4 w-4">
+                <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
+                  <circle cx="8" cy="8" r="6" fill="none" stroke="hsl(var(--muted))" strokeWidth="2.5" />
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="6"
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="2.5"
+                    strokeDasharray={`${(completedCount / 8) * 37.7} 37.7`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <span>{completedCount}/8 complete</span>
+            </div>
+
+            {canSubmit && (
+              <Button
+                size="sm"
+                variant="success"
+                loading={submitTask.isPending}
+                onClick={() => submitTask.mutate(taskId)}
+                className="gap-2 h-9 px-4"
+              >
+                <Send className="h-4 w-4" /> Submit
+              </Button>
             )}
           </div>
+        </div>
 
-          {task && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                Task Info
+        <div className="flex gap-6 lg:flex-row flex-col">
+          {/* Left panel — original */}
+          <aside className="w-full lg:w-72 border border-border bg-card/50 rounded-2xl flex flex-col p-5 gap-5 shrink-0">
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                Original Product
               </h3>
-              <p className="text-sm font-medium">{task.title}</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
-            </div>
-          )}
-
-          {/* Progress list */}
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-              Progress
-            </h3>
-            {GENERATION_TYPES.map((gt) => {
-              const gen = getGeneration(gt.key as GenerationType);
-              return (
-                <div key={gt.key} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "h-4 w-4 rounded-full flex items-center justify-center shrink-0",
-                      gen?.status === "completed"
-                        ? "bg-green-100 dark:bg-green-900/30"
-                        : gen?.status === "processing" || gen?.status === "queued"
-                        ? "bg-violet-100 dark:bg-violet-900/30"
-                        : "bg-muted"
-                    )}
+              {task ? (
+                <div className="rounded-xl overflow-hidden bg-muted aspect-square relative group">
+                  <img
+                    src={task.product_image_url}
+                    alt={task.title}
+                    className="w-full h-full object-contain"
+                  />
+                  <button
+                    onClick={() => setFullscreenUrl(task.product_image_url)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    {gen?.status === "completed" ? (
-                      <CheckCircle2 className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
-                    ) : gen?.status === "processing" || gen?.status === "queued" ? (
-                      <Clock className="h-2.5 w-2.5 text-violet-600 animate-pulse" />
-                    ) : gen?.status === "failed" ? (
-                      <AlertCircle className="h-2.5 w-2.5 text-destructive" />
-                    ) : (
-                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground truncate">{gt.label}</span>
+                    <Maximize2 className="h-6 w-6 text-white" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </aside>
+              ) : (
+                <div className="aspect-square rounded-xl bg-muted animate-pulse" />
+              )}
+            </div>
 
-        {/* Main grid */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {GENERATION_TYPES.map((gt) => {
-              const type = gt.key as GenerationType;
-              const gen = getGeneration(type);
-              return (
-                <GenTypeCard
-                  key={type}
-                  typeKey={type}
-                  label={gt.label}
-                  description={gt.description}
-                  generation={gen}
-                  onGenerate={() => handleGenerate(type)}
-                  onRegenerate={() => handleGenerate(type)}
-                  onDelete={() => gen && deleteGen.mutate(gen.id)}
-                  onMarkFinal={() => gen && markFinal.mutate(gen.id)}
-                  onFullscreen={(url) => setFullscreenUrl(url)}
-                />
-              );
-            })}
-          </div>
+            {task && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  Task Info
+                </h3>
+                <p className="text-sm font-medium">{task.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
+              </div>
+            )}
 
-          {/* Generate all button */}
-          <div className="mt-6 flex justify-center">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                GENERATION_TYPES.forEach((gt) => {
-                  const gen = getGeneration(gt.key as GenerationType);
-                  if (!gen || gen.status === "failed") {
-                    handleGenerate(gt.key as GenerationType);
-                  }
-                });
-              }}
-            >
-              <Zap className="h-4 w-4" /> Generate All Missing
-            </Button>
+            {/* Progress list */}
+            <div className="space-y-1.5 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                Progress
+              </h3>
+              {GENERATION_TYPES.map((gt) => {
+                const gen = getGeneration(gt.key as GenerationType);
+                return (
+                  <div key={gt.key} className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "h-4 w-4 rounded-full flex items-center justify-center shrink-0",
+                        gen?.status === "completed"
+                          ? "bg-green-100 dark:bg-green-900/30"
+                          : gen?.status === "processing" || gen?.status === "queued"
+                          ? "bg-violet-100 dark:bg-violet-900/30"
+                          : "bg-muted"
+                      )}
+                    >
+                      {gen?.status === "completed" ? (
+                        <CheckCircle2 className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
+                      ) : gen?.status === "processing" || gen?.status === "queued" ? (
+                        <Clock className="h-2.5 w-2.5 text-violet-600 animate-pulse" />
+                      ) : gen?.status === "failed" ? (
+                        <AlertCircle className="h-2.5 w-2.5 text-destructive" />
+                      ) : (
+                        <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground truncate">{gt.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Main grid */}
+          <div className="flex-1 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {GENERATION_TYPES.map((gt) => {
+                const type = gt.key as GenerationType;
+                const gen = getGeneration(type);
+                return (
+                  <GenTypeCard
+                    key={type}
+                    typeKey={type}
+                    label={gt.label}
+                    description={gt.description}
+                    generation={gen}
+                    onGenerate={() => handleGenerate(type)}
+                    onRegenerate={() => handleGenerate(type)}
+                    onDelete={() => gen && deleteGen.mutate(gen.id)}
+                    onMarkFinal={() => gen && markFinal.mutate(gen.id)}
+                    onFullscreen={(url) => setFullscreenUrl(url)}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Generate all button */}
+            <div className="flex flex-col items-center gap-2 border-t border-border/55 pt-6">
+              <Button
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-violet-500/20 scale-105 hover:scale-110 active:scale-95"
+                loading={generateAll.isPending && generateAll.variables === taskId}
+                onClick={() => generateAll.mutate(taskId)}
+              >
+                <Zap className="h-5 w-5 fill-current animate-pulse" /> Generate 8 Images (1-Click)
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Generates all 8 premium photography angles using AI Studio
+              </p>
+            </div>
           </div>
-        </main>
+        </div>
       </div>
 
       {fullscreenUrl && (
         <FullscreenView url={fullscreenUrl} onClose={() => setFullscreenUrl(null)} />
       )}
-    </div>
+    </DashboardLayout>
   );
 }
 

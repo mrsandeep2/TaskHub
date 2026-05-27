@@ -8,9 +8,9 @@ import { cn } from "@/utils/cn";
 export function LandingNavbar() {
 
   const navItems = [
-    { id: "features", label: "Features" },
-    { id: "workflow", label: "How It Works" },
-    { id: "ai-studio", label: "AI Studio" },
+    { id: "features", label: "Features", href: "#features" },
+    { id: "workflow", label: "How It Works", href: "#workflow" },
+    { id: "ai-studio", label: "AI Studio", href: "/ai-studio" },
   ];
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -79,7 +79,7 @@ export function LandingNavbar() {
           {navItems.map((item, i) => (
             <a
               key={item.id}
-              href={`#${item.id}`}
+              href={item.href}
               ref={el => { navRefs.current[i] = el; }}
               className={cn(
                 "relative px-1 py-0.5 cursor-pointer transition-colors",
@@ -132,7 +132,7 @@ export function LandingNavbar() {
           {navItems.map((item) => (
             <a
               key={item.id}
-              href={`#${item.id}`}
+              href={item.href}
               onClick={() => setMobileOpen(false)}
               className="block text-sm text-muted-foreground hover:text-foreground py-1 capitalize transition-colors"
             >

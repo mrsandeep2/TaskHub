@@ -37,6 +37,8 @@ def create_task():
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
     assigned_to = request.form.get("assigned_to") or None
+    if not assigned_to:
+        assigned_to = g.user["id"]
     file = request.files.get("product_image")
 
     if not title or not description or not file:
@@ -121,6 +123,23 @@ def start_task(task_id: str):
     task = TaskModel.update(task_id, {"status": "in_progress"})
     log_action(g.user["id"], "start", "task", task_id)
     return jsonify({"success": True, "data": task})
+
+
+@tasks_bp.post("/<task_id>/decline")
+@require_auth
+def decline_task(task_id: str):
+    task = TaskModel.get_by_id(task_id)
+    if not task:
+        return jsonify({"success": False, "message": "Task not found"}), 404
+    if task.get("assigned_to") != g.user["id"]:
+        return jsonify({"success": False, "message": "Unauthorized: task is not assigned to you"}), 403
+
+    updated_task = TaskModel.update(task_id, {
+        "status": "pending",
+        "assigned_to": None
+    })
+    log_action(g.user["id"], "decline", "task", task_id)
+    return jsonify({"success": True, "data": updated_task})
 
 
 @tasks_bp.post("/<task_id>/submit")

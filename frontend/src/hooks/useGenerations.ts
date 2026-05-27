@@ -56,3 +56,15 @@ export function useMarkFinal() {
     onError: () => toast.error("Failed to mark as final"),
   });
 }
+
+export function useGenerateAll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) => aiService.generateAll(taskId),
+    onSuccess: (_, taskId) => {
+      qc.invalidateQueries({ queryKey: ["generations", taskId] });
+      toast.success("Generation started for all 8 images");
+    },
+    onError: () => toast.error("Failed to start generation for all"),
+  });
+}

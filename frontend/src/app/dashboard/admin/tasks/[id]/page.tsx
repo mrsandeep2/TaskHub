@@ -1,17 +1,17 @@
 "use client";
 import { useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Zap, X, CheckCircle2, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { useTask, useAcceptTask, useRequestRevision } from "@/hooks/useTasks";
+import { useTask, useAcceptTask, useRequestRevision, useStartTask, useDeclineTask } from "@/hooks/useTasks";
 import { useGenerations } from "@/hooks/useGenerations";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { adminService } from "@/services/admin";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, RotateCcw } from "lucide-react";
 
 export default function AdminTaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +20,9 @@ export default function AdminTaskDetailPage() {
   const { data: usersData } = useQuery({ queryKey: ["admin-users"], queryFn: () => adminService.getUsers() });
   const accept = useAcceptTask();
   const requestRevision = useRequestRevision();
+  const startTask = useStartTask();
+  const declineTask = useDeclineTask();
+  const { user } = useAuth();
   const [comment, setComment] = useState("");
   const [showRevision, setShowRevision] = useState(false);
 
@@ -63,6 +66,43 @@ export default function AdminTaskDetailPage() {
         </div>
 
         <div className="space-y-4">
+          {task.assigned_to === user?.id && (
+            <Card>
+              <h3 className="font-semibold mb-3 text-xs text-muted-foreground uppercase tracking-widest">
+                Your Assignment Actions
+              </h3>
+              {task.status === "assigned" ? (
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 gap-2"
+                    variant="success"
+                    loading={startTask.isPending}
+                    onClick={() => startTask.mutate(id)}
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Accept Task
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2"
+                    variant="destructive"
+                    loading={declineTask.isPending}
+                    onClick={() => declineTask.mutate(id)}
+                  >
+                    <X className="h-4 w-4" /> Decline Task
+                  </Button>
+                </div>
+              ) : (
+                <Link href={`/ai-studio?task=${id}`}>
+                  <Button
+                    className="w-full gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium py-2 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                    disabled={task.status === "accepted"}
+                  >
+                    <Zap className="h-4 w-4" /> Open AI Studio
+                  </Button>
+                </Link>
+              )}
+            </Card>
+          )}
+
           {generations.length > 0 && (
             <Card>
               <h3 className="font-semibold mb-4 text-xs text-muted-foreground uppercase tracking-widest">

@@ -17,4 +17,7 @@ export const aiService = {
 
   markFinal: (id: string) =>
     api.put<ApiResponse<GeneratedImage>>(`/generations/${id}/mark-final`).then((r) => r.data),
+
+  generateAll: (taskId: string) =>
+    api.post<ApiResponse<any>>(`/tasks/${taskId}/generate-all`).then((r) => r.data),
 };

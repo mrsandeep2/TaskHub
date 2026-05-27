@@ -1,8 +1,8 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Zap, CheckCircle2, Clock, Send } from "lucide-react";
+import { ArrowLeft, Zap, CheckCircle2, Clock, Send, X } from "lucide-react";
 import Link from "next/link";
-import { useTask, useSubmitTask } from "@/hooks/useTasks";
+import { useTask, useSubmitTask, useStartTask, useDeclineTask } from "@/hooks/useTasks";
 import { useGenerations } from "@/hooks/useGenerations";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ export default function TaskDetailPage() {
   const { data: taskData, isLoading } = useTask(id);
   const { data: generationsData } = useGenerations(id);
   const submitTask = useSubmitTask();
+  const startTask = useStartTask();
+  const declineTask = useDeclineTask();
 
   const task = taskData?.data;
   const generations = generationsData?.data ?? [];
@@ -131,26 +133,49 @@ export default function TaskDetailPage() {
             </div>
           </Card>
 
-          <Link href={`/ai-studio?task=${id}`}>
-            <Button
-              className="w-full gap-2"
-              disabled={task.status === "accepted"}
-            >
-              <Zap className="h-4 w-4" /> Open AI Studio
-            </Button>
-          </Link>
+          {task.status === "assigned" ? (
+            <div className="flex gap-3">
+              <Button
+                className="flex-1 gap-2"
+                variant="success"
+                loading={startTask.isPending}
+                onClick={() => startTask.mutate(id)}
+              >
+                <CheckCircle2 className="h-4 w-4" /> Accept
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                variant="destructive"
+                loading={declineTask.isPending}
+                onClick={() => declineTask.mutate(id)}
+              >
+                <X className="h-4 w-4" /> Decline
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Link href={`/ai-studio?task=${id}`}>
+                <Button
+                  className="w-full gap-2"
+                  disabled={task.status === "accepted"}
+                >
+                  <Zap className="h-4 w-4" /> Open AI Studio
+                </Button>
+              </Link>
 
-          {canSubmit && (
-            <Button
-              className="w-full gap-2"
-              variant="success"
-              loading={submitTask.isPending}
-              onClick={() =>
-                submitTask.mutateAsync(id).then(() => router.push("/dashboard/user"))
-              }
-            >
-              <Send className="h-4 w-4" /> Submit for Review
-            </Button>
+              {canSubmit && (
+                <Button
+                  className="w-full gap-2"
+                  variant="success"
+                  loading={submitTask.isPending}
+                  onClick={() =>
+                    submitTask.mutateAsync(id).then(() => router.push("/dashboard/user"))
+                  }
+                >
+                  <Send className="h-4 w-4" /> Submit for Review
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

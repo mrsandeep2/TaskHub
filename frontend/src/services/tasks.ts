@@ -34,6 +34,9 @@ export const tasksService = {
   requestRevision: (id: string, comment: string) =>
     api.put<ApiResponse<Task>>(`/tasks/${id}/request-revision`, { comment }).then((r) => r.data),
 
+  decline: (id: string) =>
+    api.post<ApiResponse<Task>>(`/tasks/${id}/decline`).then((r) => r.data),
+
   getMyTasks: () =>
     api.get<PaginatedResponse<Task>>("/my-tasks").then((r) => r.data),
 };

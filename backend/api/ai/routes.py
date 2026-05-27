@@ -57,6 +57,51 @@ def generate(task_id: str):
     return jsonify({"success": True, "data": {"job_id": gen_id, "status": "queued"}}), 202
 
 
+@ai_bp.post("/tasks/<task_id>/generate-all")
+@require_auth
+def generate_all(task_id: str):
+    task = TaskModel.get_by_id(task_id)
+    if not task:
+        return jsonify({"success": False, "message": "Task not found"}), 404
+
+    # Ensure task is in_progress
+    if task["status"] in ("assigned", "pending"):
+        TaskModel.update(task_id, {"status": "in_progress"})
+
+    # Clean slate: delete all existing generations for this task first
+    from models.base import get_db
+    db = get_db()
+    db.table(GenerationModel.TABLE).delete().eq("task_id", task_id).execute()
+
+    jobs = []
+    now = datetime.now(timezone.utc).isoformat()
+    for gen_type in VALID_TYPES:
+        gen_id = str(uuid.uuid4())
+        GenerationModel.create({
+            "id": gen_id,
+            "task_id": task_id,
+            "type": gen_type,
+            "status": "queued",
+            "is_final": False,
+            "created_at": now,
+        })
+        
+        # Dispatch background job
+        try:
+            from workers.tasks import generate_image_task
+            job = generate_image_task.delay(gen_id, task_id, gen_type)
+            GenerationModel.update(gen_id, {"job_id": job.id})
+            jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
+        except Exception:
+            # Fallback sync generation when Celery is unavailable
+            _run_sync(gen_id, task_id, gen_type)
+            jobs.append({"job_id": gen_id, "type": gen_type, "status": "queued"})
+            
+        log_action(g.user["id"], "generate", "generation", gen_id, {"type": gen_type})
+
+    return jsonify({"success": True, "data": jobs}), 202
+
+
 def _run_sync(gen_id: str, task_id: str, gen_type: str):
     """Fallback sync generation when Celery is unavailable."""
     import threading

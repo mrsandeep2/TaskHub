@@ -15,6 +15,7 @@ const adminNav = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/admin/tasks", icon: ListTodo, label: "Tasks" },
+  { href: "/ai-studio", icon: Zap, label: "AI Studio" },
   { href: "/dashboard/admin/users", icon: Users, label: "Users" },
   { href: "/dashboard/admin/reviews", icon: CheckSquare, label: "Reviews" },
   { href: "/dashboard/admin/analytics", icon: BarChart3, label: "Analytics" },
