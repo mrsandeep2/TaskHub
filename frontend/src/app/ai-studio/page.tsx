@@ -72,7 +72,11 @@ function GenTypeCard({
             <img
               src={generation.image_url}
               alt={label}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className={cn(
+                "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300",
+                !disabled && "cursor-zoom-in"
+              )}
+              onClick={() => !disabled && onFullscreen(generation.image_url)}
             />
             {generation.is_final && (
               <div className="absolute top-2 right-2 z-10">
@@ -81,24 +85,36 @@ function GenTypeCard({
                 </span>
               </div>
             )}
-            <div className={cn(
-              "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5",
-              disabled && "hidden"
-            )}>
+            <div
+              onClick={() => !disabled && onFullscreen(generation.image_url)}
+              className={cn(
+                "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 cursor-zoom-in",
+                disabled && "hidden"
+              )}
+            >
               <button
-                onClick={() => onFullscreen(generation.image_url)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFullscreen(generation.image_url);
+                }}
                 className="h-8 w-8 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={onRegenerate}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRegenerate();
+                }}
                 className="h-8 w-8 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={onMarkFinal}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkFinal();
+                }}
                 className={cn(
                   "h-8 w-8 rounded-xl backdrop-blur-sm flex items-center justify-center text-white transition-colors",
                   generation.is_final ? "bg-primary/80 hover:bg-primary" : "bg-white/20 hover:bg-white/30"
@@ -107,7 +123,10 @@ function GenTypeCard({
                 <Star className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={onDelete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
                 className="h-8 w-8 rounded-xl bg-white/20 hover:bg-red-500/60 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -162,6 +181,22 @@ function GenTypeCard({
 
 // ── Fullscreen overlay ────────────────────────────────────────
 function FullscreenView({ url, onClose }: { url: string; onClose: () => void }) {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [coords, setCoords] = useState({ x: 50, y: 50 });
+
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.stopPropagation();
+    if (isZoomed) {
+      setIsZoomed(false);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setCoords({ x, y });
+      setIsZoomed(true);
+    }
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -169,22 +204,35 @@ function FullscreenView({ url, onClose }: { url: string; onClose: () => void }) 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out select-none"
       >
-        <motion.img
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          src={url}
-          alt="Preview"
-          className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className="relative max-w-full max-h-full overflow-hidden rounded-2xl flex items-center justify-center">
+          <motion.img
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ 
+              scale: isZoomed ? 2.2 : 1, 
+              opacity: 1,
+              transformOrigin: isZoomed ? `${coords.x}% ${coords.y}%` : "center center"
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            src={url}
+            alt="Preview"
+            className={cn(
+              "max-w-[90vw] max-h-[85vh] rounded-xl object-contain shadow-2xl transition-shadow duration-300",
+              isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
+            )}
+            onClick={handleImageClick}
+          />
+        </div>
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+          className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/10"
         >
           ✕
         </button>
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-xs text-white/80 border border-white/10 font-medium">
+          {isZoomed ? "Click image to zoom out" : "Click image to zoom in (HD details)"}
+        </div>
       </motion.div>
     </AnimatePresence>
   );
@@ -506,18 +554,28 @@ function AIStudioInner() {
                 Original Product
               </h3>
               {task ? (
-                <div className="rounded-xl overflow-hidden bg-muted aspect-square relative group">
+                <div
+                  onClick={() => setFullscreenUrl(task.product_image_url)}
+                  className="rounded-xl overflow-hidden bg-muted aspect-square relative group cursor-zoom-in"
+                >
                   <img
                     src={task.product_image_url}
                     alt={task.title}
                     className="w-full h-full object-contain"
                   />
-                  <button
-                    onClick={() => setFullscreenUrl(task.product_image_url)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-zoom-in"
                   >
-                    <Maximize2 className="h-6 w-6 text-white" />
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullscreenUrl(task.product_image_url);
+                      }}
+                      className="h-10 w-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center text-white transition-colors border border-white/10"
+                    >
+                      <Maximize2 className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="aspect-square rounded-xl bg-muted animate-pulse" />
