@@ -6,6 +6,7 @@ import { adminService } from "@/services/admin";
 import { tasksService } from "@/services/tasks";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { TaskTable } from "@/components/dashboard/TaskTable";
+import { useDeleteTask } from "@/hooks/useTasks";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const mockChartData = [
 
 export default function AdminDashboard() {
   const [createOpen, setCreateOpen] = useState(false);
+  const deleteTask = useDeleteTask();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-stats"],
@@ -115,7 +117,15 @@ export default function AdminDashboard() {
           <CardTitle>Recent Tasks</CardTitle>
           <Button variant="ghost" size="sm" className="text-primary text-xs">View All →</Button>
         </div>
-        <TaskTable tasks={tasksData?.data ?? []} isLoading={tasksLoading} />
+        <TaskTable
+          tasks={tasksData?.data ?? []}
+          isLoading={tasksLoading}
+          onDelete={(id) => {
+            if (confirm("Are you sure you want to delete this task?")) {
+              deleteTask.mutate(id);
+            }
+          }}
+        />
       </Card>
 
       <CreateTaskModal

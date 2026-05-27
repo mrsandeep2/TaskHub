@@ -115,3 +115,15 @@ export function useDeclineTask() {
     onError: () => toast.error("Failed to decline task"),
   });
 }
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tasksService.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task deleted successfully");
+    },
+    onError: () => toast.error("Failed to delete task"),
+  });
+}

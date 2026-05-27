@@ -108,7 +108,10 @@ export function Sidebar() {
                 className="min-w-0"
               >
                 <p className="text-sm font-medium truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                {user.email && (
+                  <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">{user.email}</p>
+                )}
+                <p className="text-[10px] text-primary/80 font-semibold capitalize mt-1 leading-none">{user.role}</p>
               </motion.div>
             )}
           </AnimatePresence>

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { useTasks } from "@/hooks/useTasks";
+import { useTasks, useDeleteTask } from "@/hooks/useTasks";
 import { useQuery } from "@tanstack/react-query";
 import { adminService } from "@/services/admin";
 import { TaskTable } from "@/components/dashboard/TaskTable";
@@ -23,6 +23,7 @@ export default function TasksPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  const deleteTask = useDeleteTask();
 
   const { data: tasksData, isLoading } = useTasks(statusFilter ? { status: statusFilter } : undefined);
   const { data: usersData } = useQuery({ queryKey: ["admin-users"], queryFn: () => adminService.getUsers() });
@@ -74,7 +75,15 @@ export default function TasksPage() {
       </div>
 
       <Card className="p-0 overflow-hidden">
-        <TaskTable tasks={filtered} isLoading={isLoading} />
+        <TaskTable
+          tasks={filtered}
+          isLoading={isLoading}
+          onDelete={(id) => {
+            if (confirm("Are you sure you want to delete this task?")) {
+              deleteTask.mutate(id);
+            }
+          }}
+        />
       </Card>
 
       <CreateTaskModal

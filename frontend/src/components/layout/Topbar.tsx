@@ -46,7 +46,10 @@ export function Topbar() {
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-medium leading-none">{user?.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 capitalize">{user?.role}</p>
+            {user?.email && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">{user.email}</p>
+            )}
+            <p className="text-[10px] text-primary/80 font-semibold mt-1 leading-none capitalize">{user?.role}</p>
           </div>
           <Button variant="ghost" size="icon-sm" onClick={signOut} aria-label="Logout">
             <LogOut className="h-4 w-4" />
